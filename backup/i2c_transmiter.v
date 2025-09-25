@@ -1,8 +1,7 @@
 module i2c_receiver (
 	input wire clk, rstn, start,
 	input wire [6:0] address,
-	input wire [7:0] reg_data,
-	input wire i2c_rw,
+	input wire sda_in,
 
 	output reg [7:0] data,
 	output reg sda, 
@@ -33,32 +32,17 @@ module i2c_receiver (
 		
 	always @(start, currState, sb_byte_finished)
 		case (currState)
-			STATE_IDLE: begin
-				if (start) nextState = STATE_START;
-				else nextState = STATE_IDLE;
-			end
-			STATE_START: begin
-				nextState = STATE_PREPARE_ADDRESS;
-			end
-			STATE_PREPARE_ADDRESS: begin
-				nextState = STATE_SENDING_ADDRESS;
-			end
-			STATE_SENDING_ADDRESS: begin
-				if (sb_byte_finished) nextState = STATE_WAIT;            //SE TERMINOU, AVANÇA
-				else nextState = STATE_SENDING_ADDRESS;
-			end
-			STATE_WAIT: begin 
-				nextState = STATE_PREPARE_DATA;
-			end
-			STATE_PREPARE_DATA: begin
-				nextState = STATE_RECEIVING_DATA;
-			end
-			STATE_RECEIVING_DATA: begin
-				if (sb_byte_finished) nextState = STATE_STOP;  //DECIDE SE VOLTA PARA O PREPARE BYTE OU SE AVAN�A
-				else nextState = STATE_RECEIVING_DATA;
-			end
+			STATE_IDLE: if (start) nextState = STATE_START;
+						else nextState = STATE_IDLE;
+			STATE_START: nextState = STATE_PREPARE_ADDRESS;
+			STATE_PREPARE_ADDRESS: nextState = STATE_SENDING_ADDRESS;					 
+			STATE_SENDING_ADDRESS: if (sb_byte_finished) nextState = STATE_WAIT;            //SE TERMINOU, AVAN�A
+								else nextState = STATE_SENDING_ADDRESS;
+			STATE_WAIT: nextState = STATE_PREPARE_DATA;							
+			STATE_PREPARE_DATA: nextState = STATE_RECEIVING_DATA;
+			STATE_RECEIVING_DATA: if (sb_byte_finished) nextState = STATE_STOP;  //DECIDE SE VOLTA PARA O PREPARE BYTE OU SE AVAN�A
+						  else nextState = STATE_RECEIVING_DATA;
 			STATE_STOP: nextState = STATE_IDLE;
-
 			default: nextState = STATE_IDLE;
 	endcase
 	
@@ -298,6 +282,7 @@ module i2c_receiver (
 			sb_scl <= 0;
 			sb_counter <= 0;
 			sb_bit_counter <= 0;
+			//sb_reg_byte <= 9'b110011001; //PARA DEBUG. Na hora de rodar o reg_byte � escrito pela outra m�quina, antes do send_byte ativar.
 		end
 	end
 

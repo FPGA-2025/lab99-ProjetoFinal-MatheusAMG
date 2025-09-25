@@ -8,7 +8,7 @@ module max30100_rx(
    output reg [15:0]  red_data,      // dado RED
 
     // interface para i2c_master
-   input  wire [7:0]  i2c_rdata,
+   input  wire [7:0]  i2c_rdata, // sda?
    input  wire        i2c_ready
    output reg         i2c_start,
    output reg         i2c_rw,        // 0=write, 1=read
