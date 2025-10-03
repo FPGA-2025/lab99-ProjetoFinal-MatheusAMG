@@ -1,20 +1,23 @@
+// Recebo dados do MAX30100 via I2C
 module i2c_receiver (
-	input wire       clk, rstn, start,
-	input wire       sda_in,
-	input wire [6:0] address,
-	input wire [7:0] register,
-	
-	output reg [4:0] state, // for debug
-	output reg [7:0] data,
-	output reg       sda, 
-	output reg       scl,
-	output reg       finished, 
-	output reg       ack
+	input wire       clk, rstn
+	input wire       rx_start,
+	input wire [6:0] rx_address,   // endereço do slave
+	input wire       rx_rw,        // 0 = write, 1 = read
+	input wire [7:0] rx_register,	 // registrador do max30100 a ser acessado
+	input reg        rx_sda_in, 
+	input reg        rx_scl_in,
+
+	output reg        rx_busy,     // dado a receber
+	output reg [15:0] rx_IRdata,   // dado a receber
+	output reg [15:0] rx_REDdata,  // dado a receber
+	output reg        rx_sda_out, 
+	output reg        rx_scl_out,
+	output reg        rx_finished, 
+	// output reg        rx_ack       // Nao escrevo direto no sda?
 );
-	
-	localparam WRITE = 1'b0;
-	localparam READ  = 1'b1;
-	
+
+
 	reg [7:0] reg_Address, reg_Data, reg_Register;
 	reg [4:0] currState, nextState;
 
@@ -22,7 +25,7 @@ module i2c_receiver (
 						 STATE_START0           	= 5'd2, 
 					
 						 STATE_PREPARE_ADDRESS0 	= 5'd3, 
-						 STATE_SENDING_ADDRESS0 	= 5'd4, 					
+						 STATE_SENDING_ADDRESS0 	= 5'd4,
 						 STATE_WAIT0            	= 5'd5,
 					
 						 STATE_PREPARE_REG 		   = 5'd6, 
@@ -51,24 +54,24 @@ module i2c_receiver (
 	reg sb_sda, sb_scl;
 	reg sb_bit;
 		
-	always @(start, currState, sb_byte_finished)
+	always @(start, currState, sb_byte_finished) 
 		case (currState)
 			STATE_IDLE: if (start) nextState = STATE_START0;
-						else nextState = STATE_IDLE;
+						   else nextState = STATE_IDLE;
 							
 			STATE_START0: nextState = STATE_PREPARE_ADDRESS0;
 			
 			STATE_PREPARE_ADDRESS0: nextState = STATE_SENDING_ADDRESS0;
 			
 			STATE_SENDING_ADDRESS0: if (sb_byte_finished) nextState = STATE_WAIT0;            //SE TERMINOU, AVAN�A
-								else nextState = STATE_SENDING_ADDRESS0;
+											else nextState = STATE_SENDING_ADDRESS0;
 						
 			STATE_WAIT0: nextState = STATE_PREPARE_REG;
 			
 			STATE_PREPARE_REG: nextState = STATE_SENDING_REG;
 			
 			STATE_SENDING_REG: if(sb_byte_finished) nextState = STATE_WAIT1;
-							else nextState = STATE_SENDING_REG;
+									 else nextState = STATE_SENDING_REG;
 			
 			STATE_WAIT1: nextState = STATE_STOP0;
 			
@@ -79,14 +82,14 @@ module i2c_receiver (
 			STATE_PREPARE_ADDRESS1: nextState = STATE_SENDING_ADDRESS1;
 			
 			STATE_SENDING_ADDRESS1: if(sb_byte_finished) nextState = STATE_WAIT3;
-							else nextState = STATE_SENDING_ADDRESS1;
+											else nextState = STATE_SENDING_ADDRESS1;
 			
 			STATE_WAIT3: nextState = STATE_PREPARE_DATA;
 			
 			STATE_PREPARE_DATA: nextState = STATE_RECEIVING_DATA;
 			
 			STATE_RECEIVING_DATA: if (sb_byte_finished) nextState = STATE_WAIT4;  //DECIDE SE VOLTA PARA O PREPARE BYTE OU SE AVAN�A
-						  else nextState = STATE_RECEIVING_DATA;
+						  				 else nextState = STATE_RECEIVING_DATA;
 			
 			STATE_WAIT4: nextState = STATE_STOP1;
 			
@@ -479,7 +482,6 @@ module i2c_receiver (
 			sb_scl <= 0;
 			sb_counter <= 0;
 			sb_bit_counter <= 0;
-			//sb_reg_byte <= 9'b110011001; //PARA DEBUG. Na hora de rodar o reg_byte � escrito pela outra m�quina, antes do send_byte ativar.
 		end
 	end
 

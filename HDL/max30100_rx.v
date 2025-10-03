@@ -1,27 +1,20 @@
 module max30100_rx(
    input  wire        clk,
    input  wire        rst_n,
-   input  wire        start_read,    // inicia leitura da FIFO
-   output reg         busy,          // ocupado durante a leitura
-   output reg         data_valid,    // 1 quando IR/RED prontos
-   output reg [15:0]  ir_data,       // dado IR
-   output reg [15:0]  red_data,      // dado RED
+   input  wire        maxRX_start,      // inicia leitura da FIFO
+   input  wire        maxRX_i2c_ready,
 
-    // interface para i2c_master
-   input  wire [7:0]  i2c_rdata, // sda?
-   input  wire        i2c_ready
-   output reg         i2c_start,
-   output reg         i2c_rw,        // 0=write, 1=read
-   output reg [6:0]   i2c_addr,
-   output reg [7:0]   i2c_reg,
-   output reg [7:0]   i2c_wdata,
-
+   output wire [6:0] maxInit_i2c_addr,    // endereço do slave
+   output wire       maxInit_i2c_rw,      // 0 = write, 1 = read
+   output reg  [7:0] maxInit_i2c_reg,
+   output reg        maxInit_done,
 );
 
     localparam MAX30100_ADDR = 7'h57;
     localparam FIFO_REG      = 8'h05;  // início da FIFO (IR_H)
 
     reg [3:0] state;
+    
     reg [7:0] ir_high, ir_low, red_high, red_low;
 
     always @(posedge clk or negedge rst_n) begin
